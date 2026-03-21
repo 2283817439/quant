@@ -1,0 +1,6 @@
+
+> quant-platform-ui@1.0.0 dev D:\quant_teade_platform\webui
+> cross-env NODE_ENV=development tsx watch server/_core/index.ts
+
+Port 3000 is busy, using port 3001 instead
+Server running on http://localhost:3001/
