@@ -1,0 +1,83 @@
+mode: backtest
+seed: 123456
+account:
+  account_id: "00000000"
+  available_cash: 50000
+  commission_rate: 0.0003
+  minimum_commission_fee: 5
+  stamp_duty_rate: 0.001
+  slippage_rate: 0.001
+index: 399001.SZ
+benchmark:
+  - 000300.SH
+risk:
+  per_trade_risk: 0.15
+  max_position_ratio: 0.12
+  min_position_ratio: 0.04
+  max_portfolio_exposure: 0.95
+  max_sell_ratio: 0.3
+  daily_max_loss: -0.05
+  order_interval: 5
+strategy:
+  class: FactorCapitalStrategy
+  frequency: daily
+  short_window: 60
+  long_window: 180
+  volatility_window: 30
+  volatility_lower_limit: 0
+  volatility_upper_limit: 1
+  trend_ratio: 0
+  stop_loss_ratio: 0.08
+  max_profit_drawdown: 0.15
+  new_high_timeout: 45
+backtest:
+  start_date: "20240701"
+  end_date: "20241231"
+  initial_capital: 50000
+optimize:
+  param_grid:
+    short_window:
+      - 40
+      - 60
+    long_window:
+      - 120
+      - 180
+    trend_ratio:
+      - 0
+    stop_loss_ratio:
+      - 0.05
+      - 0.08
+      - 0.1
+    max_profit_drawdown:
+      - 0.1
+      - 0.15
+      - 0.2
+    new_high_timeout:
+      - 30
+      - 45
+      - 60
+  metric: sharpe_ratio
+  workers: 56
+logging:
+  name: QMT
+  level: INFO
+  backtest_file_path: logs/backtest.log
+  livetest_file_path: logs/livetest.log
+  live_file_path: logs/live.log
+  optimize_file_path: logs/optimize.log
+snapshot:
+  file_path: snapshots
+record:
+  file_path: records
+web_api:
+  secret_key: CHANGE_ME_USE_A_STRONG_RANDOM_KEY_IN_PRODUCTION
+  access_token_expire_minutes: 1440
+xt:
+  session_id: 10001
+  plugin_path: g:\国金证券QMT交易端\userdata_mini
+
+paperclip:
+  repo_root: paperclip-master/paperclip-master
+  heartbeat_interval_seconds: 300
+  adapters: {}
+

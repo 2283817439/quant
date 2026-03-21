@@ -1,0 +1,51 @@
+{
+  "name": "monitor_pool_snapshot",
+  "version": "1.0.0",
+  "description": "同步 AI 监控股票池并记录最新成交数据。",
+  "runtime": "adapter",
+  "entrypoint": "quant_local.monitor.pool.list",
+  "tags": ["monitor", "portfolio"],
+  "parameters_schema": {
+    "limit": {
+      "type": "integer",
+      "description": "返回的成交记录条数",
+      "default": 50,
+      "minimum": 10,
+      "maximum": 200
+    },
+    "status": {
+      "type": "string",
+      "description": "监控池状态过滤",
+      "enum": ["monitoring", "holding", "paused", "disabled"]
+    }
+  },
+  "steps": [
+    {
+      "name": "fetch_monitor_pool",
+      "adapter": "quant_local",
+      "action": "monitor.pool.list",
+      "params": {
+        "status": "monitoring"
+      }
+    },
+    {
+      "name": "fetch_recent_fills",
+      "adapter": "quant_local",
+      "action": "monitor.pool.fills",
+      "params": {
+        "limit": 50
+      }
+    }
+  ],
+  "workflow": {
+    "code": "wf_monitor_pool_snapshot",
+    "name": "AI 监控股票池同步",
+    "schedule_cron": "*/5 * * * *",
+    "interval_seconds": 300,
+    "max_concurrency": 1,
+    "description": "定时同步监控股票池和成交记录，辅助 AI 股票池策略。",
+    "config": {
+      "interval_seconds": 300
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "deeprouter": {
+    "base_url": "https://deeprouter.top",
+    "models": {
+      "default": "claude-opus-4-6-thinking",
+      "haiku": "claude-opus-4-6-thinking",
+      "opus": "claude-opus-4-6",
+      "sonnet": "claude-sonnet-4-6-thinking"
+    }
+  },
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "models": {
+      "default": "deepseek-coder",
+      "coder": "deepseek-coder",
+      "chat": "qwen2.5"
+    }
+  },
+  "stock_picker": {
+    "default_model": "claude-opus-4-6-thinking",
+    "provider": "deeprouter",
+    "timeout": 60000
+  },
+  "news_digest": {
+    "default_model": "claude-sonnet-4-6-thinking",
+    "provider": "deeprouter",
+    "timeout": 45000
+  },
+  "monitor_pool": {
+    "price_levels": {
+      "buy": ["bid1", "bid2", "bid3", "bid4", "bid5", "limit_up", "custom"],
+      "sell": ["ask1", "ask2", "ask3", "ask4", "ask5", "limit_down", "custom"]
+    },
+    "default_quantities": [100, 200, 500, 1000],
+    "dynamic_rules": {
+      "take_profit_pct": 5.0,
+      "stop_loss_pct": 3.0,
+      "time_limit_minutes": 120
+    },
+    "polling_interval_seconds": 20,
+    "max_batch_symbols": 120
+  },
+  "ai_workflow": {
+    "scheduler": {
+      "interval_seconds": 15,
+      "max_parallel_runs": 4,
+      "max_tasks_per_run": 50,
+      "default_timeout_seconds": 180,
+      "default_budget_units": 10,
+      "max_retry": 3
+    },
+    "skills": {
+      "roots": [
+        "ai-skills/builtin",
+        "ai-skills/custom"
+      ],
+      "company_id": 1,
+      "python_entrypoint": "E:/conda/envs/lianghua/python.exe",
+      "node_entrypoint": "node",
+      "default_runtime": "python",
+      "hot_reload": true
+    },
+    "adapters": {
+      "quant_local": {
+        "enabled": true,
+        "python_entrypoint": "E:/conda/envs/lianghua/python.exe",
+        "max_concurrency": 4,
+        "services": {
+          "market_data": "services/market_data_api.py",
+          "trading": "services/qmt_api_service.py",
+          "portfolio": "core/portfolio.py"
+        },
+        "endpoints": {
+          "market_api": "http://127.0.0.1:8080/market",
+          "trading_api": "http://127.0.0.1:8080/qmt",
+          "monitor_api": "http://127.0.0.1:8080/qmt"
+        }
+      }
+    },
+    "events": {
+      "log_path": "logs/live.log",
+      "watchdog_on_failure": true
+    }
+  }
+}
