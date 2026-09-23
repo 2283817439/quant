@@ -53,6 +53,7 @@ services:
       TASK_QUEUE_BACKEND: redis
       WORKER_ID: worker-1
       WORKER_CONCURRENCY: 2
+      BACKTEST_RUNNER: ${BACKTEST_RUNNER:-}
     command: ["python", "workers/task_worker.py"]
     depends_on:
       api:
@@ -72,6 +73,7 @@ services:
       TASK_QUEUE_BACKEND: redis
       WORKER_ID: worker-2
       WORKER_CONCURRENCY: 2
+      BACKTEST_RUNNER: ${BACKTEST_RUNNER:-}
     command: ["python", "workers/task_worker.py"]
     depends_on:
       api:
