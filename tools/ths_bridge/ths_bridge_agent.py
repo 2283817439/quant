@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Minimal HTTP bridge that exposes ths_api (TongHuaShun) data/trade services.
 
-Run this script inside the Í¬»¨Ë³½»Ò×¿Í»§¶ËµÄ½Å±¾»·¾³ so that the built-in ths_api
+Run this script inside the åŒèŠ±é¡ºäº¤æ˜“å®¢æˆ·ç«¯çš„è„šæœ¬ç¯å¢ƒ so that the built-in ths_api
 package is available. The server listens on 127.0.0.1:9015 by default and
 provides the /api/* routes expected by quant_teade_platform.
 """
@@ -25,7 +25,7 @@ except ImportError:
 try:
     from ths_api import *  # noqa: F401,F403
 except Exception as exc:  # noqa: BLE001
-    raise SystemExit("ths_api not available. Please run inside Í¬»¨Ë³¿Í»§¶Ë½Å±¾»·¾³: %s" % exc)
+    raise SystemExit("ths_api not available. Please run inside åŒèŠ±é¡ºå®¢æˆ·ç«¯è„šæœ¬ç¯å¢ƒ: %s" % exc)
 
 AUTH_TOKEN = os.environ.get("THS_BRIDGE_TOKEN", "local-ths-token")
 HOST = os.environ.get("THS_BRIDGE_HOST", "127.0.0.1")
@@ -48,7 +48,7 @@ except Exception as exc:  # noqa: BLE001
 ORDER_ID_MAP = {}
 ORDER_MAP_LOCK = threading.Lock()
 
-SELL_LABELS = set(["Âô", "¹Á", "Ùu", "å–å‡º"])
+SELL_LABELS = set(["å–", "æ²½", "è³£", "é—æ §åš­"])
 
 
 def _float(value):
@@ -73,15 +73,15 @@ def _status_from_text(text):
             text = text.decode("utf-8", "ignore")
         except Exception:
             text = str(text)
-    if any(token in text for token in ["³·", "cancel"]):
+    if any(token in text for token in ["æ’¤", "cancel"]):
         return "cancelled"
-    if "²¿" in text and "³É" in text:
+    if "éƒ¨" in text and "æˆ" in text:
         return "partial"
-    if "È«" in text and "³É" in text:
+    if "å…¨" in text and "æˆ" in text:
         return "filled"
-    if "ÒÑ" in text and "³É" in text:
+    if "å·²" in text and "æˆ" in text:
         return "filled"
-    if "³É" in text:
+    if "æˆ" in text:
         return "filled"
     return "pending"
 

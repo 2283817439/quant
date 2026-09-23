@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime data and secrets
+data/
+logs/
+snapshots/
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+pnpm-dev.log
+pnpm-dev.err
+
+# Local build and editor files
+.DS_Store
+.vscode/
+.idea/

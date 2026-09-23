@@ -5,13 +5,18 @@ import time
 import pandas as pd
 from typing import Dict, List
 from datetime import date
-import xtquant  # noqa: F401  # Ensure interpreter-provided xtquant is available
-from xtquant import xtdata
+try:
+    import xtquant  # noqa: F401  # Optional vendor-provided SDK
+    from xtquant import xtdata
+except ImportError:  # The API must remain usable for backtests and local development.
+    xtquant = None
+    xtdata = None
 from config.config import ConfigManager
 from core.exceptions import MarketDataError
 from utils.logger import sys_logger
 
-xtdata.enable_hello = False
+if xtdata is not None:
+    xtdata.enable_hello = False
 
 logger = sys_logger.getChild('Market')
 
