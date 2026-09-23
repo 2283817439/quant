@@ -33,8 +33,9 @@ def _task_from_row(row: Any) -> QueuedTask:
 class SqliteTaskQueue:
     """Durable development queue with leases and fencing tokens."""
 
-    def __init__(self, path: str | Path = "data/tasks.db") -> None:
+    def __init__(self, path: str | Path = "data/tasks.db", observer: Any | None = None) -> None:
         self.path = str(path)
+        self.observer = observer
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self._connection() as db:
@@ -83,7 +84,10 @@ class SqliteTaskQueue:
                 return None
             db.execute("UPDATE task_queue SET state=?, attempts=attempts+1, lease_until=?, lease_token=?, worker_id=?, updated_at=? WHERE id=?", (TaskState.RUNNING, lease_until.isoformat(), token, worker_id, now.isoformat(), row["id"]))
             row = dict(row); row["attempts"] += 1; row["lease_until"] = lease_until.isoformat(); row["lease_token"] = token
-        return _task_from_row(row)
+        task = _task_from_row(row)
+        if self.observer:
+            self.observer.lease_claimed(task.id, worker_id, task.lease_token)
+        return task
 
     def complete(self, task_id: str, worker_id: str, result: Any = None, lease_token: str | None = None) -> None:
         with self._connection() as db:
@@ -92,6 +96,8 @@ class SqliteTaskQueue:
                 AND (? IS NULL OR lease_token=?)""", (TaskState.SUCCEEDED, json.dumps(result, default=str), _now().isoformat(), task_id, TaskState.RUNNING, worker_id, lease_token, lease_token))
             if result_row.rowcount != 1:
                 raise RuntimeError(f"task lease lost or fenced: {task_id}")
+            if self.observer:
+                self.observer.lease_completed(task_id, worker_id, "succeeded")
 
     def fail(self, task_id: str, worker_id: str, error: str, retry_delay_seconds: int = 5, lease_token: str | None = None) -> TaskFailure:
         now = _now()

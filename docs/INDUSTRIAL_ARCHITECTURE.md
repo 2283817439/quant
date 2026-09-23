@@ -139,3 +139,11 @@ The feedback package now includes two optimizer extensions:
 - `BayesianOptimizer`: a lightweight kernel-weighted surrogate with an upper-confidence-bound acquisition function, deterministic seeded exploration, and persisted initial/acquisition trials.
 
 Both optimizers use the same injected backtest evaluator and `EvaluationMetrics` contract as the original feedback loop. They propose and rank parameters; promotion remains a separate control-plane decision through `CandidateMetrics`, lifecycle checks, shadow deployment, canary limits, and the kill switch.
+
+## Redis production backend, operations dashboard, and promotion alerts
+
+`services/redis_backend.py` provides production adapters for distributed locks and task queues. Redis locks use an atomic `SET NX PX` lease, a separate monotonic fencing counter, and Lua compare-and-renew/release scripts. The Redis task queue uses a sorted ready set, an active-lease set, hashes for task state, atomic Lua claim/recovery, and fenced completion/failure transitions. Expired active leases are requeued atomically on the next claim. SQLite remains the local fallback; production workers should be configured with a shared Redis URL and unique queue prefix.
+
+The process-local `MonitoringRegistry` is a dashboard projection. `GET /ops` serves the authenticated operations page and `GET /api/ops/overview` returns production strategies, Canary strategies, task lease owners, fencing tokens, and lease summary counts. The dashboard refreshes every three seconds and requires the existing Bearer token. For multi-process production deployments, the registry should be replaced or fed by a Redis-backed projection/event consumer so every API replica observes the same state.
+
+`services/notifications` adds `WebhookNotifier`, `SmtpNotifier`, and `CompositeNotifier`. The promotion pipeline emits `strategy.rejected` and `strategy.production` events. Notification failures are fail-open by default so an unavailable alert channel cannot silently change the trading decision; operators may choose fail-closed behavior for deployments where notification delivery is a hard gate. URLs, SMTP credentials, and recipients are intentionally configuration-only and are not enabled by this change.

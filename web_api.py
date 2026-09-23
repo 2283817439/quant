@@ -11,6 +11,7 @@ import statistics
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, Header
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -30,6 +31,7 @@ from core.risk import RiskManager
 from utils.logger import sys_logger
 from utils.database import get_database_manager
 from services.paperclip_integration import PaperclipIntegrationService
+from services.monitoring import monitoring_registry
 
 logger = sys_logger.getChild('WebAPI')
 
@@ -814,6 +816,15 @@ def require_role(required_role: str):
 # ==================== FastAPI 应用 ====================
 
 app = FastAPI(title="量化交易平台 API", version="1.0.0")
+
+@app.get("/api/ops/overview")
+async def api_ops_overview(current_user: User = Depends(get_current_user)):
+    """Operational projection for the authenticated monitoring dashboard."""
+    return monitoring_registry.snapshot()
+
+@app.get("/ops")
+async def ops_dashboard(current_user: User = Depends(get_current_user)):
+    return FileResponse(os.path.join(PROJECT_ROOT, "dashboard", "index.html"))
 
 # CORS 配置
 app.add_middleware(

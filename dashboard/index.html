@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quant Operations Dashboard</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#0b1020;color:#e7ecff}body{margin:0;padding:24px;background:radial-gradient(circle at top,#17234a,#0b1020 55%)}main{max-width:1200px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.muted{color:#98a4c7}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0}.card{background:#111a32;border:1px solid #26345c;border-radius:14px;padding:18px;box-shadow:0 8px 24px #0003}.metric{font-size:30px;font-weight:700;margin-top:8px}.ok{color:#6ee7b7}.warn{color:#fbbf24}.bad{color:#fb7185}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #26345c;font-size:14px}th{color:#98a4c7}.pill{padding:4px 9px;border-radius:999px;background:#26345c}.pill.promoted,.pill.succeeded{background:#14532d;color:#bbf7d0}.pill.canary,.pill.running{background:#713f12;color:#fde68a}.pill.rejected,.pill.dead_letter{background:#7f1d1d;color:#fecaca}button,input{background:#0b1020;color:#e7ecff;border:1px solid #34456f;border-radius:8px;padding:9px}button{cursor:pointer}.toolbar{display:flex;gap:8px;align-items:center}.wide{margin-top:14px} @media(max-width:800px){.grid{grid-template-columns:1fr}.top{display:block}.toolbar{margin-top:12px}}
+</style></head>
+<body><main>
+<div class="top"><div><h1>Quant Operations</h1><div class="muted">生产策略、Canary 策略与 Worker 租约实时监控</div></div><div class="toolbar"><input id="token" type="password" placeholder="Bearer token"><button onclick="refresh()">刷新</button></div></div>
+<section class="grid"><div class="card"><div class="muted">Production 策略</div><div id="production" class="metric">—</div></div><div class="card"><div class="muted">Canary 策略</div><div id="canary" class="metric">—</div></div><div class="card"><div class="muted">运行中租约</div><div id="running" class="metric">—</div></div></section>
+<div class="card wide"><h2>策略状态</h2><table><thead><tr><th>策略</th><th>版本</th><th>状态</th><th>更新时间</th><th>原因</th></tr></thead><tbody id="strategies"></tbody></table></div>
+<div class="card wide"><h2>任务队列租约竞抢</h2><table><thead><tr><th>任务</th><th>Worker</th><th>Fencing token</th><th>状态</th><th>更新时间</th></tr></thead><tbody id="leases"></tbody></table></div>
+<p id="updated" class="muted"></p></main>
+<script>
+const tokenInput=document.getElementById('token'); tokenInput.value=localStorage.getItem('quant_token')||'';
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function refresh(){const token=tokenInput.value.trim();localStorage.setItem('quant_token',token);const headers=token?{Authorization:`Bearer ${token}`}:{ };const res=await fetch('/api/ops/overview',{headers});if(!res.ok){document.getElementById('updated').textContent=`加载失败：HTTP ${res.status}`;return}const d=await res.json();document.getElementById('production').textContent=d.production_strategies.length;document.getElementById('canary').textContent=d.canary_strategies.length;document.getElementById('running').textContent=d.lease_summary.running;document.getElementById('strategies').innerHTML=d.all_strategies.map(s=>`<tr><td>${esc(s.strategy_id)}</td><td>${esc(s.version)}</td><td><span class="pill ${esc(s.status)}">${esc(s.status)}</span></td><td>${esc(s.updated_at)}</td><td>${esc(s.reason||'')}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">暂无策略事件</td></tr>';document.getElementById('leases').innerHTML=d.task_leases.map(l=>`<tr><td>${esc(l.task_id)}</td><td>${esc(l.worker_id)}</td><td>${esc(l.lease_token)}</td><td><span class="pill ${esc(l.state)}">${esc(l.state)}</span></td><td>${esc(l.updated_at)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">暂无任务租约事件</td></tr>';document.getElementById('updated').textContent=`最后更新：${d.generated_at}`}
+refresh();setInterval(refresh,3000);
+</script></body></html>
