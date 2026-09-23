@@ -12,6 +12,8 @@ class MonitoringRegistry:
         self._lock = RLock()
         self._strategies: dict[str, dict[str, Any]] = {}
         self._leases: dict[str, dict[str, Any]] = {}
+        self._ai: dict[str, Any] = {}
+        self._liquidity: dict[str, dict[str, Any]] = {}
 
     @staticmethod
     def _now() -> str:
@@ -33,6 +35,14 @@ class MonitoringRegistry:
             current = self._leases.setdefault(task_id, {"task_id": task_id})
             current.update({"worker_id": worker_id, "state": state, "updated_at": self._now()})
 
+    def ai_insight(self, insight: dict[str, Any]) -> None:
+        with self._lock:
+            self._ai = {**insight, "updated_at": self._now()}
+
+    def liquidity(self, symbol: str, metrics: dict[str, Any]) -> None:
+        with self._lock:
+            self._liquidity[symbol] = {"symbol": symbol, **metrics, "updated_at": self._now()}
+
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
             strategies = list(self._strategies.values())
@@ -43,6 +53,8 @@ class MonitoringRegistry:
             "canary_strategies": [item for item in strategies if item["status"] == "canary"],
             "all_strategies": strategies,
             "task_leases": leases,
+            "ai_insight": dict(self._ai),
+            "liquidity": list(self._liquidity.values()),
             "lease_summary": {
                 "running": sum(item.get("state") == "running" for item in leases),
                 "succeeded": sum(item.get("state") == "succeeded" for item in leases),

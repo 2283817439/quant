@@ -5,6 +5,7 @@ from typing import Literal
 
 from services.market_data_store import OrderBookSnapshot
 from services.metrics import metrics_registry
+from services.monitoring import monitoring_registry
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,14 @@ class LiquidityRiskGate:
         metrics_registry.set_gauge("quant_liquidity_bid_depth", metrics.bid_depth, labels)
         metrics_registry.set_gauge("quant_liquidity_ask_depth", metrics.ask_depth, labels)
         metrics_registry.set_gauge("quant_liquidity_imbalance", metrics.imbalance, labels)
+        monitoring_registry.liquidity(snapshot.symbol, {
+            "spread_bps": metrics.spread_bps,
+            "bid_depth": metrics.bid_depth,
+            "ask_depth": metrics.ask_depth,
+            "imbalance": metrics.imbalance,
+            "mid_price": metrics.mid_price,
+            "estimated_impact_bps": metrics.estimated_impact_bps,
+        })
         return metrics
 
     def check(self, symbol: str, quantity: float, snapshot: OrderBookSnapshot | None = None) -> LiquidityDecision:

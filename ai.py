@@ -1,9 +1,12 @@
 """Small, deterministic AI facade with an offline rule-based fallback."""
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 from services.intelligence import AIInsight, QuantIntelligenceEngine
+from services.ml import HotReloadingRLPolicy
 
 
 class QuantAssistant:
@@ -14,6 +17,8 @@ class QuantAssistant:
         self.intelligence = QuantIntelligenceEngine(
             float(config.get("ai.confidence_threshold", 0.55))
         )
+        rl_path = config.get("ai.rl_model_path")
+        self.rl_policy = HotReloadingRLPolicy(Path(rl_path)) if rl_path else None
 
     def call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         del max_tokens
@@ -36,6 +41,27 @@ class QuantAssistant:
         if base_size < 0:
             raise ValueError("base_size must be non-negative")
         return base_size * self.analyze_market(factors, signals).recommended_size_multiplier
+
+    def analyze_with_rl(self, factors: dict[str, float], signals: dict[str, float] | None = None) -> dict[str, Any]:
+        insight = self.analyze_market(factors, signals)
+        if self.rl_policy is None:
+            return {"insight": insight.as_dict(), "rl": None}
+        decision = self.rl_policy.decide(insight.regime.value, explore=False)
+        if decision.action == "hold":
+            insight = replace(insight, action="hold", recommended_size_multiplier=0.0,
+                              reasons=insight.reasons + ("Online RL 策略建议观望",))
+        return {"insight": insight.as_dict(), "rl": {"action": decision.action, "value": decision.value, "confidence": decision.confidence}}
+
+    def update_rl_from_backtest(self, samples: list[dict[str, Any]], persist: bool = True) -> int:
+        if self.rl_policy is None:
+            return 0
+        count = 0
+        for sample in samples:
+            self.rl_policy.update(str(sample["context"]), str(sample["action"]), float(sample["reward"]), persist=False)
+            count += 1
+        if persist:
+            self.rl_policy.policy.save(self.rl_policy.path)
+        return count
 
     @staticmethod
     def _rule_answer(prompt: str) -> str:

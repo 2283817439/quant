@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import Any
 
 from services.metrics import metrics_registry
+from services.monitoring import monitoring_registry
 
 
 class Regime(StrEnum):
@@ -73,4 +74,5 @@ class QuantIntelligenceEngine:
         metrics_registry.set_gauge("quant_ai_confidence", confidence)
         metrics_registry.set_gauge("quant_ai_signal_score", score)
         metrics_registry.inc_counter("quant_ai_insights_total", labels={"regime": regime.value, "action": action})
+        monitoring_registry.ai_insight(insight.as_dict())
         return insight

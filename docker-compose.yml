@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: timescale/timescaledb:latest-pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-quant}
       POSTGRES_USER: ${POSTGRES_USER:-quant}
@@ -80,6 +80,17 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  timescale-maintenance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-quant}:${POSTGRES_PASSWORD:-quant_dev_password}@postgres:5432/${POSTGRES_DB:-quant}
+    command: ["python", "-m", "services.timescale.maintenance", "--dsn", "postgresql://${POSTGRES_USER:-quant}:${POSTGRES_PASSWORD:-quant_dev_password}@postgres:5432/${POSTGRES_DB:-quant}"]
+    depends_on:
       postgres:
         condition: service_healthy
 
