@@ -1,0 +1,1 @@
+ALTER TABLE task_queue ADD COLUMN IF NOT EXISTS lease_token UUID;

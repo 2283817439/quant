@@ -118,3 +118,11 @@ OutboxPublisherWorker
 ```
 
 This remains **at-least-once** delivery. The task handler and any downstream consumer must remain idempotent. A production deployment should run multiple Publisher Worker instances against PostgreSQL; row locks and `SKIP LOCKED` distribute pending messages safely.
+
+## Distributed locks, fenced Worker leases, and feedback loop
+
+Multi-node coordination uses PostgreSQL row-backed leases. A lock acquisition returns an owner, lease expiry, and monotonically increasing fencing token. Releasing a lock preserves the token counter; a later owner receives a larger token. Consumers of shared resources must reject commands carrying an older token.
+
+Task claims now also receive a per-claim fencing token. Completion and failure acknowledgements require the same token, so a paused Worker whose lease expired cannot acknowledge or overwrite the result after another node has reclaimed the task. This prevents stale Worker commits; handlers still need idempotency because a crash after an external side effect can produce at-least-once redelivery.
+
+The feedback loop in `services/feedback` injects a replayable backtest evaluator, scores each trial with Sharpe, out-of-sample return, drawdown, turnover, stability, and risk-breach penalties, persists every trial, and adaptively refines candidates around the best observed parameters. The resulting metrics can be converted to `CandidateMetrics` and passed to the existing lifecycle gate. The optimizer never promotes a strategy by itself; production promotion remains controlled by the strategy lifecycle and its approval/safety gates.

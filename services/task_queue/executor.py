@@ -69,14 +69,14 @@ class AsyncTaskExecutor:
                 result = self.handlers[task.task_type](task.payload)
                 if inspect.isawaitable(result):
                     result = await result
-                await asyncio.to_thread(self.queue.complete, task.id, worker_id, result)
+                await asyncio.to_thread(self.queue.complete, task.id, worker_id, result, task.lease_token)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - task failures are persisted
                 logger.exception("task failed: %s", task.id)
                 try:
                     await asyncio.to_thread(
-                        self.queue.fail, task.id, worker_id, str(exc), self.retry_delay_seconds
+                        self.queue.fail, task.id, worker_id, str(exc), self.retry_delay_seconds, task.lease_token
                     )
                 except Exception:  # noqa: BLE001
                     logger.exception("failed to persist task failure: %s", task.id)

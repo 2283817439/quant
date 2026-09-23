@@ -23,6 +23,7 @@ class QueuedTask:
     max_attempts: int
     available_at: datetime
     lease_until: datetime | None = None
+    lease_token: str | None = None
 
 
 @dataclass(frozen=True)
