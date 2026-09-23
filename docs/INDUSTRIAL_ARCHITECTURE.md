@@ -88,3 +88,15 @@ API Gateway -> Control Plane API -> PostgreSQL
 ```
 
 For higher throughput, the queue contract can later be moved to a dedicated broker without changing task handlers; the PostgreSQL queue is the first durable step and avoids introducing another operational dependency prematurely.
+
+## PostgreSQL migrations and reliable messaging
+
+PostgreSQL schema changes are versioned under `migrations/postgres`. The migration runner creates `schema_migrations`, takes a transaction-scoped advisory lock, applies files in lexical order, records a SHA-256 checksum, and refuses to continue if an already-applied migration was modified. Run it as a release step, not from every application worker:
+
+```bash
+python -m services.control_plane.migrate --dsn "$DATABASE_URL"
+```
+
+The Outbox pattern writes a business change and its outgoing message in the same database transaction boundary. A publisher claims pending messages with a lease and marks them published only after the downstream publish succeeds. A crash can cause redelivery, so publishers and consumers must be idempotent.
+
+The Inbox pattern uses `(consumer_name, message_id)` as a unique key. Duplicate deliveries are ignored after successful processing. Failed deliveries are moved back to `received` on the next attempt, while successfully processed deliveries remain terminal. This gives at-least-once delivery with deduplicated consumer effects; exactly-once delivery is not assumed.
