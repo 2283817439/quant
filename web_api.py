@@ -11,7 +11,7 @@ import statistics
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status, Header
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
@@ -32,6 +32,7 @@ from utils.logger import sys_logger
 from utils.database import get_database_manager
 from services.paperclip_integration import PaperclipIntegrationService
 from services.monitoring import monitoring_registry
+from services.metrics import metrics_registry, refresh_operational_metrics
 
 logger = sys_logger.getChild('WebAPI')
 
@@ -820,7 +821,14 @@ app = FastAPI(title="量化交易平台 API", version="1.0.0")
 @app.get("/api/ops/overview")
 async def api_ops_overview(current_user: User = Depends(get_current_user)):
     """Operational projection for the authenticated monitoring dashboard."""
-    return monitoring_registry.snapshot()
+    snapshot = monitoring_registry.snapshot()
+    refresh_operational_metrics(snapshot)
+    return snapshot
+
+@app.get("/metrics", include_in_schema=False)
+async def prometheus_metrics():
+    refresh_operational_metrics(monitoring_registry.snapshot())
+    return Response(metrics_registry.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 @app.get("/ops")
 async def ops_dashboard(current_user: User = Depends(get_current_user)):

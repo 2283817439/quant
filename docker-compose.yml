@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-quant}
+      POSTGRES_USER: ${POSTGRES_USER:-quant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quant_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-quant}:${POSTGRES_PASSWORD:-quant_dev_password}@postgres:5432/${POSTGRES_DB:-quant}
+      REDIS_URL: redis://redis:6379/0
+      TASK_QUEUE_BACKEND: redis
+      WEB_API_HOST: 0.0.0.0
+      WEB_API_PORT: 8080
+    command: ["sh", "-c", "python -m services.control_plane.migrate --dsn \"$$DATABASE_URL\" && python web_api.py"]
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-quant}:${POSTGRES_PASSWORD:-quant_dev_password}@postgres:5432/${POSTGRES_DB:-quant}
+      REDIS_URL: redis://redis:6379/0
+      TASK_QUEUE_BACKEND: redis
+      WORKER_ID: worker-1
+      WORKER_CONCURRENCY: 2
+    command: ["python", "workers/task_worker.py"]
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-quant}:${POSTGRES_PASSWORD:-quant_dev_password}@postgres:5432/${POSTGRES_DB:-quant}
+      REDIS_URL: redis://redis:6379/0
+      TASK_QUEUE_BACKEND: redis
+      WORKER_ID: worker-2
+      WORKER_CONCURRENCY: 2
+    command: ["python", "workers/task_worker.py"]
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
