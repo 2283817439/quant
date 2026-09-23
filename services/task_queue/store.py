@@ -85,7 +85,8 @@ class SqliteTaskQueue:
             db.execute(
                 """INSERT INTO task_queue
                 (id, task_type, payload_json, state, attempts, max_attempts, available_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)""",
+                VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)
+                ON CONFLICT(id) DO NOTHING""",
                 (task_id, task_type, json.dumps(payload, sort_keys=True), TaskState.QUEUED,
                  max(1, max_attempts), available_at.isoformat(), now.isoformat(), now.isoformat()),
             )
@@ -186,7 +187,8 @@ class PostgresTaskQueue:
         with self._pool.connection() as db:
             db.execute(
                 """INSERT INTO task_queue (id, task_type, payload_json, state, max_attempts, available_at, created_at, updated_at)
-                VALUES (%s, %s, %s::jsonb, 'queued', %s, %s, %s, %s)""",
+                VALUES (%s, %s, %s::jsonb, 'queued', %s, %s, %s, %s)
+                ON CONFLICT(id) DO NOTHING""",
                 (task_id, task_type, json.dumps(payload), max(1, max_attempts), available_at, now, now),
             )
         return task_id

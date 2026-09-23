@@ -100,3 +100,21 @@ python -m services.control_plane.migrate --dsn "$DATABASE_URL"
 The Outbox pattern writes a business change and its outgoing message in the same database transaction boundary. A publisher claims pending messages with a lease and marks them published only after the downstream publish succeeds. A crash can cause redelivery, so publishers and consumers must be idempotent.
 
 The Inbox pattern uses `(consumer_name, message_id)` as a unique key. Duplicate deliveries are ignored after successful processing. Failed deliveries are moved back to `received` on the next attempt, while successfully processed deliveries remain terminal. This gives at-least-once delivery with deduplicated consumer effects; exactly-once delivery is not assumed.
+
+## Transactional Outbox and Publisher Worker
+
+Control-plane business writes now insert the domain row, immutable audit event, and pending Outbox message on the same database transaction. If any part fails, all three are rolled back. The PostgreSQL and SQLite control-plane stores expose the same lease-based Outbox interface.
+
+`OutboxPublisherWorker` claims messages with a lease, invokes an idempotent sink, and acknowledges only after the sink succeeds. `TaskQueueEventSink` maps event types to durable task types and uses the Outbox message ID as the task ID. Therefore a publisher retry cannot create a second task even if the process crashes after queue insertion and before Outbox acknowledgement.
+
+```text
+business command
+  └─ same DB transaction ─┬─ domain state
+                          ├─ audit event
+                          └─ outbox_messages(pending)
+
+OutboxPublisherWorker
+  └─ lease -> TaskQueueEventSink -> task_queue(task_id=message_id) -> acknowledge
+```
+
+This remains **at-least-once** delivery. The task handler and any downstream consumer must remain idempotent. A production deployment should run multiple Publisher Worker instances against PostgreSQL; row locks and `SKIP LOCKED` distribute pending messages safely.
