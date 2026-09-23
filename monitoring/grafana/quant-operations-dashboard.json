@@ -1,0 +1,26 @@
+{
+  "annotations": {"list": [{"builtIn": 1, "datasource": {"type": "grafana", "uid": "-- Grafana --"}, "enable": true, "hide": true, "iconColor": "#5794F2", "name": "Annotations & Alerts", "type": "dashboard"}]},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {"type": "stat", "title": "Production Strategies", "id": 1, "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_production_strategy_count", "refId": "A"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}, "unit": "short"}, "overrides": []}},
+    {"type": "stat", "title": "Canary Strategies", "id": 2, "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_canary_strategy_count", "refId": "A"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}]}, "unit": "short"}, "overrides": []}},
+    {"type": "stat", "title": "Queue Backlog", "id": 3, "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_task_queue_backlog", "refId": "A"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 10}, {"color": "red", "value": 50}]}, "unit": "short"}, "overrides": []}},
+    {"type": "timeseries", "title": "Incremental Equity", "id": 4, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_incremental_equity", "legendFormat": "equity", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "none", "color": {"mode": "palette-classic"}}, "overrides": []}, "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}},
+    {"type": "timeseries", "title": "Incremental Drawdown", "id": 5, "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_incremental_drawdown", "legendFormat": "drawdown", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 0.1}, {"color": "red", "value": 0.2}]}}, "overrides": []}},
+    {"type": "timeseries", "title": "Market Tick Throughput", "id": 6, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "sum by (symbol) (rate(quant_market_ticks_total[5m]))", "legendFormat": "{{symbol}}", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []}, "options": {"legend": {"displayMode": "table", "placement": "right"}}},
+    {"type": "timeseries", "title": "Task Lease States", "id": 7, "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "quant_task_lease_count", "legendFormat": "{{state}}", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []}},
+    {"type": "timeseries", "title": "API Availability", "id": 8, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}, "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "targets": [{"expr": "up{job=\"quant-api\"}", "legendFormat": "api", "refId": "A"}], "fieldConfig": {"defaults": {"unit": "short", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}}
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["quant", "trading", "prometheus", "production"],
+  "templating": {"list": [{"name": "DS_PROMETHEUS", "type": "datasource", "query": "prometheus", "label": "Prometheus", "current": {"text": "Prometheus", "value": ""}}]},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Quant Trading Operations",
+  "uid": "quant-ops",
+  "version": 1
+}

@@ -9,6 +9,7 @@ from typing import Any
 
 from services.coordination.locks import LockHandle
 from services.task_queue.models import QueuedTask, TaskFailure, TaskState
+from services.metrics import metrics_registry
 
 
 class RedisLockManager:
@@ -64,12 +65,18 @@ class RedisTaskQueue:
     def _key(self, task_id: str) -> str:
         return f"{self.prefix}task:{task_id}"
 
+    def backlog(self) -> int:
+        value = int(self.client.zcard(self.ready_key))
+        metrics_registry.set_gauge("quant_task_queue_backlog", value)
+        return value
+
     def enqueue(self, task_type: str, payload: dict[str, Any], max_attempts: int = 3,
                 available_at: datetime | None = None, task_id: str | None = None) -> str:
         task_id = task_id or str(uuid.uuid4()); available_at = available_at or datetime.now(timezone.utc); key = self._key(task_id)
         pipe = self.client.pipeline()
         pipe.hsetnx(key, "task_type", task_type); pipe.hsetnx(key, "payload_json", json.dumps(payload, sort_keys=True)); pipe.hsetnx(key, "state", "queued")
         pipe.hsetnx(key, "attempts", 0); pipe.hsetnx(key, "max_attempts", max(1, max_attempts)); pipe.hsetnx(key, "available_at", available_at.timestamp()); pipe.zadd(self.ready_key, {task_id: available_at.timestamp()}); pipe.execute()
+        self.backlog()
         return task_id
 
     def claim(self, worker_id: str, lease_seconds: int = 60) -> QueuedTask | None:
@@ -81,6 +88,7 @@ class RedisTaskQueue:
         task = QueuedTask(str(task_id), task_type, json.loads(payload), int(attempts), int(max_attempts), datetime.fromtimestamp(float(available_at), timezone.utc), datetime.fromtimestamp(float(lease_until), timezone.utc), str(token))
         if self.observer:
             self.observer.lease_claimed(task.id, worker_id, task.lease_token)
+        self.backlog()
         return task
 
     def complete(self, task_id: str, worker_id: str, result: Any = None, lease_token: str | None = None) -> None:
