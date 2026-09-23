@@ -2,6 +2,7 @@
 
 from .lifecycle import StrategyLifecycle
 from .models import CandidateMetrics, PromotionPolicy, PromotionResult
+from .postgres import PostgresControlPlaneStore
 from .store import ControlPlaneStore
 
 __all__ = [
@@ -9,5 +10,6 @@ __all__ = [
     "ControlPlaneStore",
     "PromotionPolicy",
     "PromotionResult",
+    "PostgresControlPlaneStore",
     "StrategyLifecycle",
 ]

@@ -69,3 +69,22 @@ Add paper/shadow execution, a dedicated risk service, exposure snapshots, reconc
 ### Phase 4: production canary
 
 Require two-person or policy-based approval, fixed capital budgets, automatic rollback, disaster recovery drills, and a controlled broker enablement process. Production trading remains a deployment decision, not an AI decision.
+
+## PostgreSQL control plane and task execution
+
+`PostgresControlPlaneStore` implements the same lifecycle contract as the SQLite reference store. It uses pooled connections, JSONB payloads, UTC timestamps, and the same hash-chained event model. Shared deployments should set a PostgreSQL DSN through secret management and run migrations as a separate release step.
+
+`SqliteTaskQueue` is intended for development and CI. `PostgresTaskQueue` uses row-level locks with `FOR UPDATE SKIP LOCKED`, leases, and at-least-once delivery so multiple worker processes can consume the same queue. `AsyncTaskExecutor` supports async or synchronous handlers, bounded worker counts, retry budgets, dead-letter state, and graceful shutdown. Handlers must be idempotent because a worker crash after side effects and before acknowledgement can cause a redelivery.
+
+Recommended production topology:
+
+```text
+API Gateway -> Control Plane API -> PostgreSQL
+                              \\-> Task Queue (PostgreSQL + SKIP LOCKED)
+                                      |-> Backtest workers
+                                      |-> Feature workers
+                                      |-> Simulation workers
+                                      |-> Evaluation workers
+```
+
+For higher throughput, the queue contract can later be moved to a dedicated broker without changing task handlers; the PostgreSQL queue is the first durable step and avoids introducing another operational dependency prematurely.

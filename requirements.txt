@@ -20,4 +20,6 @@ chinese-calendar>=1.10,<2
 
 # Optional database adapter and test runner
 mysql-connector-python>=9.6,<10
+psycopg[binary]>=3.2,<4
+psycopg-pool>=3.2,<4
 pytest>=8,<9
