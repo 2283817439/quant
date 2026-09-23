@@ -126,3 +126,16 @@ Multi-node coordination uses PostgreSQL row-backed leases. A lock acquisition re
 Task claims now also receive a per-claim fencing token. Completion and failure acknowledgements require the same token, so a paused Worker whose lease expired cannot acknowledge or overwrite the result after another node has reclaimed the task. This prevents stale Worker commits; handlers still need idempotency because a crash after an external side effect can produce at-least-once redelivery.
 
 The feedback loop in `services/feedback` injects a replayable backtest evaluator, scores each trial with Sharpe, out-of-sample return, drawdown, turnover, stability, and risk-breach penalties, persists every trial, and adaptively refines candidates around the best observed parameters. The resulting metrics can be converted to `CandidateMetrics` and passed to the existing lifecycle gate. The optimizer never promotes a strategy by itself; production promotion remains controlled by the strategy lifecycle and its approval/safety gates.
+
+## Live intervention and optimizer extensions
+
+`LiveInterventionController` is the fail-closed boundary for live intervention. A risk-service or operator trigger activates the kill switch, emits an auditable event, blocks new orders, and optionally invokes injected broker actions for cancel-all and flatten-all. The default controller has no broker adapter, so tests cannot place real orders. Clearing the switch is explicit and restores order permission only after the caller's external approval gates.
+
+Automated tests cover drawdown-triggered activation, duplicate-trigger suppression, manual flattening, event-chain integrity, and clearing behavior. These are simulation tests and do not connect to a real broker.
+
+The feedback package now includes two optimizer extensions:
+
+- `GeneticOptimizer`: bounded populations, elite selection, arithmetic crossover, deterministic seeded mutation, and per-generation persistence.
+- `BayesianOptimizer`: a lightweight kernel-weighted surrogate with an upper-confidence-bound acquisition function, deterministic seeded exploration, and persisted initial/acquisition trials.
+
+Both optimizers use the same injected backtest evaluator and `EvaluationMetrics` contract as the original feedback loop. They propose and rank parameters; promotion remains a separate control-plane decision through `CandidateMetrics`, lifecycle checks, shadow deployment, canary limits, and the kill switch.

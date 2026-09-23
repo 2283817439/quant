@@ -2,6 +2,15 @@
 
 from .loop import FeedbackLoop, OptimizationResult
 from .models import EvaluationMetrics, ParameterTrial
+from .optimizers import BayesianOptimizer, GeneticOptimizer
 from .store import EvaluationStore
 
-__all__ = ["EvaluationMetrics", "EvaluationStore", "FeedbackLoop", "OptimizationResult", "ParameterTrial"]
+__all__ = [
+    "BayesianOptimizer",
+    "EvaluationMetrics",
+    "EvaluationStore",
+    "FeedbackLoop",
+    "GeneticOptimizer",
+    "OptimizationResult",
+    "ParameterTrial",
+]
