@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Callable
 
 from .models import OrderRequest, OrderResult, OrderState, OrderUpdate
@@ -19,10 +19,11 @@ class ExecutionGateway:
     def __init__(self, adapters: dict[str, Any], policy: ExecutionRiskPolicy | None = None,
                  kill_switch: Callable[[], bool] | None = None,
                  price_provider: Callable[[str], float] | None = None,
+                 liquidity_gate: Any | None = None,
                  on_update: Callable[[OrderUpdate], Any] | None = None) -> None:
         if not adapters:
             raise ValueError("at least one execution adapter is required")
-        self.adapters = adapters; self.policy = policy or ExecutionRiskPolicy(); self.kill_switch = kill_switch or (lambda: False); self.price_provider = price_provider or (lambda _symbol: 0.0); self.on_update = on_update; self.daily_notional = 0.0
+        self.adapters = adapters; self.policy = policy or ExecutionRiskPolicy(); self.kill_switch = kill_switch or (lambda: False); self.price_provider = price_provider or (lambda _symbol: 0.0); self.liquidity_gate = liquidity_gate; self.on_update = on_update; self.daily_notional = 0.0
 
     def _validate(self, request: OrderRequest) -> float:
         if self.kill_switch():
@@ -50,6 +51,12 @@ class ExecutionGateway:
         return available[0]
 
     def submit(self, request: OrderRequest, venues: list[str] | None = None) -> OrderResult:
+        if self.liquidity_gate is not None:
+            decision = self.liquidity_gate.check(request.symbol.upper().replace("/", ""), request.quantity)
+            if not decision.allowed:
+                raise PermissionError(f"liquidity gate blocked order: {decision.reason}")
+            if decision.action == "reduce" and decision.max_quantity is not None:
+                request = replace(request, quantity=min(request.quantity, decision.max_quantity))
         notional = self._validate(request)
         venue, adapter = self._select(request, venues)
         try:

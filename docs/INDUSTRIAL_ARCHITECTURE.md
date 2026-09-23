@@ -180,3 +180,11 @@ The API exposes `GET /metrics` using Prometheus text format. It exports strategy
 - `migrations/clickhouse/001_market_data.sql`
 
 Set `BACKTEST_RUNNER=module:function` on Worker containers to enable actual backtest execution. The function must accept `(parameters, dataset)` and return a JSON-compatible metrics dictionary. The default Worker entrypoint does not invent trading results and will reject a `backtest.run` task when no runner is configured.
+
+## Realtime Timescale ingestion, liquidity risk, and AI intelligence
+
+`services/market_stream/RealtimeMarketPersistencePipeline` consumes `MarketTick`, `TradeEvent`, and `OrderBookSnapshot` events, batches them by size or time, writes them asynchronously through `TimescaleMarketStore`, and retries a failed batch by restoring it to the in-memory buffer. It also updates the `LiquidityRiskGate` from each order-book snapshot. A production source can connect the Binance adapter or another venue adapter directly to `pipeline.ingest`/`pipeline.run`.
+
+`services/liquidity` computes spread in basis points, bid/ask depth, book imbalance, and estimated market impact. The gate fails closed when no recent book exists, the spread is too wide, depth is insufficient, or impact exceeds the limit. Borderline orders can be reduced to a safe quantity. These metrics are exported as `quant_liquidity_*` Prometheus series and can be passed to `ExecutionGateway` as its `liquidity_gate`.
+
+`services/intelligence` upgrades the compatibility `ai.py` facade into an explainable decision-support layer. It classifies market regime, fuses momentum/value/ML signals, estimates confidence, emits reasons, and recommends a position-size multiplier. The module is deterministic and does not pretend to be a predictive guarantee; external LLM or ML models remain optional advisory components behind the existing promotion and risk gates.

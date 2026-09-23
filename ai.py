@@ -3,12 +3,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.intelligence import AIInsight, QuantIntelligenceEngine
+
 
 class QuantAssistant:
     def __init__(self, config: Any, database: Any = None) -> None:
         self.config = config
         self.database = database
         self.llm_provider = config.get("ai.llm_provider", "rules")
+        self.intelligence = QuantIntelligenceEngine(
+            float(config.get("ai.confidence_threshold", 0.55))
+        )
 
     def call_llm(self, prompt: str, max_tokens: int = 200) -> str:
         del max_tokens
@@ -19,6 +24,18 @@ class QuantAssistant:
         if self.llm_provider == "rules":
             return self._rule_answer(prompt)
         return self._rule_answer(prompt) + "（当前使用离线规则引擎；配置模型后可启用 LLM。）"
+
+    def analyze_market(self, factors: dict[str, float], signals: dict[str, float] | None = None) -> AIInsight:
+        """Return structured regime, confidence, action, and risk guidance."""
+        return self.intelligence.analyze(factors, signals)
+
+    def explain_signal(self, factors: dict[str, float], signals: dict[str, float] | None = None) -> dict[str, Any]:
+        return self.analyze_market(factors, signals).as_dict()
+
+    def recommend_position_size(self, factors: dict[str, float], base_size: float, signals: dict[str, float] | None = None) -> float:
+        if base_size < 0:
+            raise ValueError("base_size must be non-negative")
+        return base_size * self.analyze_market(factors, signals).recommended_size_multiplier
 
     @staticmethod
     def _rule_answer(prompt: str) -> str:
